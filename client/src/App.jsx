@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import "./App.css";
 
 function App() {
@@ -10,17 +10,13 @@ function App() {
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("Main Course");
 
-  const [dictionary, setDictionary] = useState([
-    {
-      term: "Kottu",
-      instruction: "Keep the word Kottu in the translated menu name.",
-    },
-    {
-      term: "Pol Sambol",
-      instruction:
-        "Keep Pol Sambol as the original dish name and describe it as a Sri Lankan coconut relish.",
-    },
-  ]);
+  const [dictionary, setDictionary] = useState([]);
+
+  const [translations, setTranslations] = useState([]);
+
+  const [currentRecord, setCurrentRecord] = useState(null);
+
+  const [dataLoading, setDataLoading] = useState(true);
 
   const [dictionaryTerm, setDictionaryTerm] = useState("");
   const [dictionaryInstruction, setDictionaryInstruction] = useState("");
@@ -53,25 +49,98 @@ function App() {
     "Other",
   ];
 
-  const handleAddDictionaryItem = () => {
+  useEffect(() => {
+    loadSavedData();
+  }, []);
+
+  const loadSavedData = async () => {
+    try {
+      setDataLoading(true);
+
+      const [dictionaryResponse, translationsResponse] = await Promise.all([
+        fetch("http://localhost:5000/api/dictionary"),
+        fetch("http://localhost:5000/api/translations"),
+      ]);
+
+      const dictionaryData = await dictionaryResponse.json();
+
+      const translationsData = await translationsResponse.json();
+
+      if (dictionaryData.success) {
+        setDictionary(dictionaryData.dictionary || []);
+      }
+
+      if (translationsData.success) {
+        setTranslations(translationsData.translations || []);
+      }
+    } catch (error) {
+      console.error("Failed to load saved data:", error);
+
+      setError("Could not load saved MenuBridge data.");
+    } finally {
+      setDataLoading(false);
+    }
+  };
+
+  const handleAddDictionaryItem = async () => {
     if (!dictionaryTerm.trim() || !dictionaryInstruction.trim()) {
       return;
     }
 
-    setDictionary((prev) => [
-      ...prev,
-      {
-        term: dictionaryTerm.trim(),
-        instruction: dictionaryInstruction.trim(),
-      },
-    ]);
+    try {
+      setError("");
 
-    setDictionaryTerm("");
-    setDictionaryInstruction("");
+      const response = await fetch("http://localhost:5000/api/dictionary", {
+        method: "POST",
+
+        headers: {
+          "Content-Type": "application/json",
+        },
+
+        body: JSON.stringify({
+          term: dictionaryTerm,
+          instruction: dictionaryInstruction,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "Failed to save terminology rule");
+      }
+
+      setDictionary((previous) => [...previous, data.rule]);
+
+      setDictionaryTerm("");
+      setDictionaryInstruction("");
+    } catch (error) {
+      console.error(error);
+
+      setError(error.message);
+    }
   };
 
-  const handleRemoveDictionaryItem = (index) => {
-    setDictionary((prev) => prev.filter((_, i) => i !== index));
+  const handleRemoveDictionaryItem = async (id) => {
+    try {
+      const response = await fetch(
+        `http://localhost:5000/api/dictionary/${id}`,
+        {
+          method: "DELETE",
+        },
+      );
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "Failed to remove rule");
+      }
+
+      setDictionary((previous) => previous.filter((item) => item.id !== id));
+    } catch (error) {
+      console.error(error);
+
+      setError(error.message);
+    }
   };
 
   const handleTranslate = async () => {
@@ -80,11 +149,13 @@ function App() {
 
     if (!name.trim()) {
       setError("Please enter a menu item name.");
+
       return;
     }
 
     if (!targetLanguage) {
       setError("Please select a target language.");
+
       return;
     }
 
@@ -93,9 +164,11 @@ function App() {
 
       const response = await fetch("http://localhost:5000/api/translate-menu", {
         method: "POST",
+
         headers: {
           "Content-Type": "application/json",
         },
+
         body: JSON.stringify({
           restaurantName,
           sourceLanguage,
@@ -103,7 +176,6 @@ function App() {
           name,
           description,
           category,
-          dictionary,
         }),
       });
 
@@ -114,16 +186,161 @@ function App() {
       }
 
       setTranslation(data.translation);
-    } catch (err) {
-      console.error(err);
-      setError(err.message || "Something went wrong.");
+
+      setCurrentRecord(data.record);
+
+      /*
+       * Put new generated result
+       * immediately into history.
+       */
+      setTranslations((previous) => [data.record, ...previous]);
+    } catch (error) {
+      console.error(error);
+
+      setError(error.message || "Something went wrong.");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleApprove = () => {
-    setApproved(true);
+  const handleApprove = async () => {
+    if (!currentRecord?.id) {
+      setError("No generated translation is available to approve.");
+
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `http://localhost:5000/api/translations/${currentRecord.id}/approve`,
+        {
+          method: "PATCH",
+        },
+      );
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "Failed to approve translation");
+      }
+
+      setApproved(true);
+
+      setCurrentRecord(data.translation);
+
+      setTranslations((previous) =>
+        previous.map((item) =>
+          item.id === data.translation.id ? data.translation : item,
+        ),
+      );
+    } catch (error) {
+      console.error(error);
+
+      setError(error.message);
+    }
+  };
+
+  const handleDeleteTranslation = async (id) => {
+    const confirmed = window.confirm("Delete this translation?");
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `http://localhost:5000/api/translations/${id}`,
+        {
+          method: "DELETE",
+        },
+      );
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "Delete failed");
+      }
+
+      setTranslations((previous) => previous.filter((item) => item.id !== id));
+
+      if (currentRecord?.id === id) {
+        setTranslation(null);
+        setCurrentRecord(null);
+        setApproved(false);
+      }
+    } catch (error) {
+      console.error(error);
+
+      setError(error.message);
+    }
+  };
+
+  const escapeCSV = (value) => {
+    const text = String(value ?? "");
+
+    return `"${text.replace(/"/g, '""')}"`;
+  };
+
+  const handleExportCSV = () => {
+    const approvedItems = translations.filter(
+      (item) => item.status === "APPROVED",
+    );
+
+    if (approvedItems.length === 0) {
+      setError("Approve at least one translation before exporting.");
+
+      return;
+    }
+
+    const headers = [
+      "Restaurant",
+      "Category",
+      "Source Language",
+      "Target Language",
+      "Original Name",
+      "Original Description",
+      "Translated Name",
+      "Translated Description",
+      "Cultural Note",
+    ];
+
+    const rows = approvedItems.map((item) => [
+      item.restaurant_name,
+      item.category,
+      item.source_language,
+      item.target_language,
+      item.original_name,
+      item.original_description,
+      item.translated_name,
+      item.translated_description,
+      item.cultural_note,
+    ]);
+
+    const csv = [
+      headers.map(escapeCSV).join(","),
+
+      ...rows.map((row) => row.map(escapeCSV).join(",")),
+    ].join("\n");
+
+    const blob = new Blob([csv], {
+      type: "text/csv;charset=utf-8;",
+    });
+
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+
+    link.href = url;
+
+    link.download = "menubridge-approved-menu.csv";
+
+    document.body.appendChild(link);
+
+    link.click();
+
+    document.body.removeChild(link);
+
+    URL.revokeObjectURL(url);
   };
 
   const handleClear = () => {
@@ -366,21 +583,18 @@ function App() {
               </div>
 
               <div className="dictionary-list">
-                {dictionary.map((item, index) => (
-                  <div
-                    className="dictionary-item"
-                    key={`${item.term}-${index}`}
-                  >
+                {dictionary.map((item) => (
+                  <div className="dictionary-item" key={item.id}>
                     <div>
                       <strong>{item.term}</strong>
+
                       <p>{item.instruction}</p>
                     </div>
 
                     <button
                       type="button"
                       className="remove-button"
-                      onClick={() => handleRemoveDictionaryItem(index)}
-                      aria-label={`Remove ${item.term}`}
+                      onClick={() => handleRemoveDictionaryItem(item.id)}
                     >
                       ×
                     </button>
@@ -482,6 +696,98 @@ function App() {
             </div>
           </section>
         )}
+
+        <section className="history-section">
+          <div className="history-header">
+            <div>
+              <span className="eyebrow">Saved Locally</span>
+
+              <h3>Translation History</h3>
+
+              <p>
+                Every AI-generated translation is automatically stored in your
+                local JSON file.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              className="export-button"
+              onClick={handleExportCSV}
+            >
+              ↓ Export Approved CSV
+            </button>
+          </div>
+
+          {dataLoading ? (
+            <div className="history-empty">Loading saved translations...</div>
+          ) : translations.length === 0 ? (
+            <div className="history-empty">No translations generated yet.</div>
+          ) : (
+            <div className="history-table-wrapper">
+              <table className="history-table">
+                <thead>
+                  <tr>
+                    <th>Original</th>
+                    <th>Translation</th>
+                    <th>Language</th>
+                    <th>Category</th>
+                    <th>Status</th>
+                    <th></th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {translations.map((item) => (
+                    <tr key={item.id}>
+                      <td>
+                        <strong>{item.original_name}</strong>
+
+                        {item.original_description && (
+                          <small>{item.original_description}</small>
+                        )}
+                      </td>
+
+                      <td>
+                        <strong>{item.translated_name}</strong>
+
+                        {item.translated_description && (
+                          <small>{item.translated_description}</small>
+                        )}
+                      </td>
+
+                      <td>{item.target_language}</td>
+
+                      <td>{item.category || "—"}</td>
+
+                      <td>
+                        <span
+                          className={`history-status ${
+                            item.status === "APPROVED"
+                              ? "history-status-approved"
+                              : ""
+                          }`}
+                        >
+                          {item.status}
+                        </span>
+                      </td>
+
+                      <td>
+                        <button
+                          type="button"
+                          className="history-delete"
+                          onClick={() => handleDeleteTranslation(item.id)}
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
       </main>
 
       <footer className="footer">
