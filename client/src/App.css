@@ -947,3 +947,203 @@ button:disabled {
     font-size: 20px;
   }
 }
+
+/* =====================================================
+   TRANSLATION HISTORY
+===================================================== */
+
+.history-section {
+  margin-top: 24px;
+  padding: 29px;
+
+  border: 1px solid #dfe5dc;
+  border-radius: 26px;
+
+  background: rgba(255, 255, 255, 0.96);
+
+  box-shadow: 0 18px 42px rgba(30, 51, 39, 0.055);
+}
+
+.history-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 30px;
+
+  margin-bottom: 24px;
+}
+
+.history-header h3 {
+  margin: 0;
+
+  color: #18271d;
+
+  font-size: 24px;
+  letter-spacing: -0.035em;
+}
+
+.history-header p {
+  margin: 8px 0 0;
+
+  color: #7b867e;
+
+  font-size: 12px;
+}
+
+.export-button {
+  flex-shrink: 0;
+
+  border: 0;
+  border-radius: 13px;
+
+  padding: 12px 17px;
+
+  background: #193d2c;
+  color: white;
+
+  font-size: 12px;
+  font-weight: 800;
+
+  cursor: pointer;
+}
+
+.export-button:hover {
+  background: #214c37;
+}
+
+.history-empty {
+  padding: 40px;
+
+  border: 1px dashed #d8ded5;
+  border-radius: 16px;
+
+  background: #fafbf9;
+
+  color: #89928c;
+
+  font-size: 13px;
+  text-align: center;
+}
+
+.history-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+
+  border: 1px solid #e3e7e1;
+  border-radius: 16px;
+}
+
+.history-table {
+  width: 100%;
+  min-width: 850px;
+
+  border-collapse: collapse;
+
+  background: white;
+}
+
+.history-table th {
+  padding: 13px 15px;
+
+  text-align: left;
+
+  background: #f5f8f3;
+
+  color: #6f7a72;
+
+  font-size: 10px;
+  font-weight: 800;
+
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+
+  border-bottom: 1px solid #e3e7e1;
+}
+
+.history-table td {
+  padding: 15px;
+
+  vertical-align: top;
+
+  color: #59645c;
+
+  font-size: 12px;
+
+  border-bottom: 1px solid #edf0eb;
+}
+
+.history-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.history-table td strong {
+  display: block;
+
+  color: #243229;
+
+  font-size: 13px;
+}
+
+.history-table td small {
+  display: block;
+
+  max-width: 260px;
+
+  margin-top: 5px;
+
+  color: #89928d;
+
+  line-height: 1.45;
+}
+
+.history-status {
+  display: inline-flex;
+
+  padding: 6px 9px;
+
+  border-radius: 999px;
+
+  background: #f0f2ef;
+  color: #68736b;
+
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.history-status-approved {
+  background: #e5f4e6;
+  color: #347044;
+}
+
+.history-delete {
+  padding: 7px 10px;
+
+  border: 0;
+  border-radius: 9px;
+
+  background: #fff1f1;
+  color: #a64f4f;
+
+  font-size: 10px;
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+.history-delete:hover {
+  background: #fbe4e4;
+}
+
+@media (max-width: 720px) {
+  .history-section {
+    padding: 20px;
+  }
+
+  .history-header {
+    flex-direction: column;
+  }
+
+  .export-button {
+    width: 100%;
+  }
+}

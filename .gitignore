@@ -4,8 +4,6 @@ client/node_modules/
 server/node_modules/
 
 # Environment files
-.env
-.env.*
 !.env.example
 
 # Logs
@@ -33,7 +31,6 @@ coverage/
 Thumbs.db
 
 # IDE / Editor
-.vscode/
 .idea/
 *.swp
 *.swo
@@ -53,3 +50,4 @@ models/
 
 # Misc
 .cache/
+config.bat
