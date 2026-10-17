@@ -1,122 +1,496 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { useState } from "react";
+import "./App.css";
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [restaurantName, setRestaurantName] = useState("Ceylon Kitchen");
+  const [sourceLanguage, setSourceLanguage] = useState("English");
+  const [targetLanguage, setTargetLanguage] = useState("French");
+
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [category, setCategory] = useState("Main Course");
+
+  const [dictionary, setDictionary] = useState([
+    {
+      term: "Kottu",
+      instruction: "Keep the word Kottu in the translated menu name.",
+    },
+    {
+      term: "Pol Sambol",
+      instruction:
+        "Keep Pol Sambol as the original dish name and describe it as a Sri Lankan coconut relish.",
+    },
+  ]);
+
+  const [dictionaryTerm, setDictionaryTerm] = useState("");
+  const [dictionaryInstruction, setDictionaryInstruction] = useState("");
+
+  const [translation, setTranslation] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [approved, setApproved] = useState(false);
+
+  const languages = [
+    "English",
+    "French",
+    "German",
+    "Spanish",
+    "Italian",
+    "Portuguese",
+    "Chinese",
+    "Japanese",
+    "Korean",
+  ];
+
+  const categories = [
+    "Starter",
+    "Main Course",
+    "Rice & Curry",
+    "Seafood",
+    "Dessert",
+    "Beverage",
+    "Snack",
+    "Other",
+  ];
+
+  const handleAddDictionaryItem = () => {
+    if (!dictionaryTerm.trim() || !dictionaryInstruction.trim()) {
+      return;
+    }
+
+    setDictionary((prev) => [
+      ...prev,
+      {
+        term: dictionaryTerm.trim(),
+        instruction: dictionaryInstruction.trim(),
+      },
+    ]);
+
+    setDictionaryTerm("");
+    setDictionaryInstruction("");
+  };
+
+  const handleRemoveDictionaryItem = (index) => {
+    setDictionary((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleTranslate = async () => {
+    setError("");
+    setApproved(false);
+
+    if (!name.trim()) {
+      setError("Please enter a menu item name.");
+      return;
+    }
+
+    if (!targetLanguage) {
+      setError("Please select a target language.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const response = await fetch("http://localhost:5000/api/translate-menu", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          restaurantName,
+          sourceLanguage,
+          targetLanguage,
+          name,
+          description,
+          category,
+          dictionary,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || "Translation failed.");
+      }
+
+      setTranslation(data.translation);
+    } catch (err) {
+      console.error(err);
+      setError(err.message || "Something went wrong.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleApprove = () => {
+    setApproved(true);
+  };
+
+  const handleClear = () => {
+    setName("");
+    setDescription("");
+    setCategory("Main Course");
+    setTranslation(null);
+    setApproved(false);
+    setError("");
+  };
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <div className="app-shell">
+      <header className="topbar">
+        <div className="brand">
+          <div className="brand-icon">M</div>
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
+          <div>
+            <h1>MenuBridge AI</h1>
+            <p>Translate local dishes without losing their identity.</p>
+          </div>
         </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+        <div className="local-ai-badge">
+          <span className="status-dot"></span>
+          Local AI
+        </div>
+      </header>
+
+      <main className="page-content">
+        <section className="hero">
+          <div>
+            <span className="eyebrow">Restaurant Translation Workspace</span>
+
+            <h2>
+              Make your menu understandable
+              <br />
+              without making it generic.
+            </h2>
+
+            <p>
+              Translate restaurant dishes with local AI while preserving
+              cultural names, ingredients, and restaurant terminology.
+            </p>
+          </div>
+
+          <div className="hero-card">
+            <span>Powered locally by</span>
+            <strong>Gemma 3 + Ollama</strong>
+            <small>Menu information can stay on your own machine.</small>
+          </div>
+        </section>
+
+        <div className="workspace-grid">
+          <div className="left-column">
+            <section className="panel">
+              <div className="panel-heading">
+                <div>
+                  <span className="section-number">01</span>
+                  <h3>Restaurant Setup</h3>
+                </div>
+
+                <p>
+                  Define where this translation belongs and which language you
+                  need.
+                </p>
+              </div>
+
+              <div className="form-grid">
+                <div className="field field-full">
+                  <label>Restaurant Name</label>
+
+                  <input
+                    type="text"
+                    value={restaurantName}
+                    onChange={(e) => setRestaurantName(e.target.value)}
+                    placeholder="Example: Ceylon Kitchen"
+                  />
+                </div>
+
+                <div className="field">
+                  <label>Source Language</label>
+
+                  <select
+                    value={sourceLanguage}
+                    onChange={(e) => setSourceLanguage(e.target.value)}
+                  >
+                    {languages.map((language) => (
+                      <option key={language} value={language}>
+                        {language}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="field">
+                  <label>Target Language</label>
+
+                  <select
+                    value={targetLanguage}
+                    onChange={(e) => setTargetLanguage(e.target.value)}
+                  >
+                    {languages.map((language) => (
+                      <option key={language} value={language}>
+                        {language}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </section>
+
+            <section className="panel">
+              <div className="panel-heading">
+                <div>
+                  <span className="section-number">02</span>
+                  <h3>Menu Item</h3>
+                </div>
+
+                <p>Add the dish exactly as it currently appears on the menu.</p>
+              </div>
+
+              <div className="form-grid">
+                <div className="field field-full">
+                  <label>Dish Name</label>
+
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Example: Seafood Kottu"
+                  />
+                </div>
+
+                <div className="field field-full">
+                  <label>Description</label>
+
+                  <textarea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Example: Chopped roti mixed with prawns, cuttlefish, vegetables, egg and house spices."
+                    rows={5}
+                  />
+                </div>
+
+                <div className="field field-full">
+                  <label>Category</label>
+
+                  <select
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                  >
+                    {categories.map((item) => (
+                      <option key={item} value={item}>
+                        {item}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {error && <div className="error-box">{error}</div>}
+
+              <div className="form-actions">
+                <button
+                  className="secondary-button"
+                  type="button"
+                  onClick={handleClear}
+                  disabled={loading}
+                >
+                  Clear
+                </button>
+
+                <button
+                  className="primary-button"
+                  type="button"
+                  onClick={handleTranslate}
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <>
+                      <span className="spinner"></span>
+                      Translating...
+                    </>
+                  ) : (
+                    <>
+                      <span className="button-icon">✦</span>
+                      Translate with AI
+                    </>
+                  )}
+                </button>
+              </div>
+            </section>
+          </div>
+
+          <aside className="right-column">
+            <section className="panel dictionary-panel">
+              <div className="panel-heading compact">
+                <div>
+                  <span className="section-number">03</span>
+                  <h3>Restaurant Dictionary</h3>
+                </div>
+              </div>
+
+              <p className="dictionary-intro">
+                Teach MenuBridge how your restaurant wants specific local words
+                and dish names handled.
+              </p>
+
+              <div className="dictionary-inputs">
+                <div className="field">
+                  <label>Term</label>
+
+                  <input
+                    type="text"
+                    value={dictionaryTerm}
+                    onChange={(e) => setDictionaryTerm(e.target.value)}
+                    placeholder="Example: Hoppers"
+                  />
+                </div>
+
+                <div className="field">
+                  <label>Translation Rule</label>
+
+                  <textarea
+                    rows={3}
+                    value={dictionaryInstruction}
+                    onChange={(e) => setDictionaryInstruction(e.target.value)}
+                    placeholder="Example: Keep the original word and explain that it is a Sri Lankan bowl-shaped pancake."
+                  />
+                </div>
+
+                <button
+                  className="add-rule-button"
+                  type="button"
+                  onClick={handleAddDictionaryItem}
+                >
+                  + Add terminology rule
+                </button>
+              </div>
+
+              <div className="dictionary-list">
+                {dictionary.map((item, index) => (
+                  <div
+                    className="dictionary-item"
+                    key={`${item.term}-${index}`}
+                  >
+                    <div>
+                      <strong>{item.term}</strong>
+                      <p>{item.instruction}</p>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="remove-button"
+                      onClick={() => handleRemoveDictionaryItem(index)}
+                      aria-label={`Remove ${item.term}`}
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </aside>
+        </div>
+
+        {translation && (
+          <section className="translation-section">
+            <div className="translation-heading">
+              <div>
+                <span className="eyebrow">AI Translation Result</span>
+                <h3>
+                  {approved
+                    ? "Translation approved"
+                    : "Review before publishing"}
+                </h3>
+              </div>
+
+              {approved && (
+                <div className="approved-badge">
+                  <span>✓</span>
+                  Approved
+                </div>
+              )}
+            </div>
+
+            <div className="translation-grid">
+              <article className="translation-card original-card">
+                <div className="card-topline">
+                  <span>Original</span>
+                  <small>{sourceLanguage}</small>
+                </div>
+
+                <h4>{translation.original_name || name}</h4>
+
+                <p className="dish-description">
+                  {description || "No description provided."}
+                </p>
+
+                <div className="category-chip">{category}</div>
+              </article>
+
+              <div className="translation-arrow">→</div>
+
+              <article className="translation-card translated-card">
+                <div className="card-topline">
+                  <span>Translated</span>
+                  <small>{targetLanguage}</small>
+                </div>
+
+                <h4>{translation.translated_name}</h4>
+
+                <p className="dish-description">
+                  {translation.translated_description ||
+                    "No translated description returned."}
+                </p>
+
+                {translation.kept_original_term && (
+                  <div className="preserved-badge">
+                    ✓ Original cultural term preserved
+                  </div>
+                )}
+              </article>
+            </div>
+
+            {translation.cultural_note && (
+              <div className="cultural-note">
+                <div className="note-icon">i</div>
+
+                <div>
+                  <strong>Cultural note</strong>
+                  <p>{translation.cultural_note}</p>
+                </div>
+              </div>
+            )}
+
+            <div className="translation-actions">
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={handleTranslate}
+                disabled={loading}
+              >
+                ↻ Regenerate
+              </button>
+
+              <button
+                type="button"
+                className="approve-button"
+                onClick={handleApprove}
+                disabled={approved}
+              >
+                {approved ? "✓ Approved" : "✓ Approve Translation"}
+              </button>
+            </div>
+          </section>
+        )}
+      </main>
+
+      <footer className="footer">
+        <p>MenuBridge AI</p>
+
+        <span>Local restaurant translation powered by open-weight AI.</span>
+      </footer>
+    </div>
+  );
 }
 
-export default App
+export default App;
